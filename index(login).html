@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="style_login.css">
+
+</head>
+<body>
+    <div class="loginCSS">
+        <div class="username">
+            <input type="text" id="username" placeholder="Username">
+        </div>
+        <div class="password">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+        <button id="loginBtn">Login</button>
+        <button id="cancel">Quit</button>
+        <div id="error-message" style="display:none; color:red; font-weight:bold; margin-top:10px;"></div>
+    </div>
+
+
+    <script>
+
+document.getElementById('cancel').onclick = function() {
+    window.close();
+};
+
+        const correctUsername = "jokim.rech@gmx.de";
+        const correctPassword = "suJvet-wejzes-8jecmo";
+
+
+document.getElementById('loginBtn').onclick = function() {
+    const user = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    if (user === correctUsername && pass === correctPassword) {
+        window.location.href = "index.html";
+    } else {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.textContent = "Falscher Benutzername oder Passwort!";
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('username').focus();
+        }, 5000);
+    }
+};
+
+// Enter-Taste abfangen
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        document.getElementById('loginBtn').click();
+    }
+});
+    </script>
+</body>
+</html>

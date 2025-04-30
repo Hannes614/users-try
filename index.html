@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Users Fähnchen</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 825px;
+            width: 1420px;
+            top: -20px;
+            left: 250px;
+            border: #000000 solid 2px;
+            border-top-left-radius: 10px;
+        }
+        .search-container {
+            position: absolute;
+            top: 72px;
+            left: 20px;
+        }
+        #plz {
+            height: 25px;
+            width: 170px;
+            left: 0px ;
+            top: 0px;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            text-indent: 10px;
+            padding-left: 20px; /* Platz für die Lupe */
+        } 
+        body {
+            background-image: url("Baum.png");
+            font-family: Arial, sans-serif;
+            text-align: center;
+            border: #000000;
+            border-top-left-radius: 10px;
+        }
+        #deleteMarkerBtn {
+            position: absolute;
+            top: 82px;
+            left: 30px;
+            border: 2px solid #500101;
+            border-radius: 10px;
+            color: #e7f8fa;
+            box-shadow: 0px 5px 5px rgba(0, 0, 0, 0.2), 0px -2px 2px rgba(255, 255, 255, 0.5) inset, 0 2px 2px rgba(255, 255, 255, 0.8) inset;
+            background: linear-gradient(#ce0000, #7c0000);
+            text-shadow: 0 -2px #022b31;
+            padding: 10px;
+       }
+        #deleteMarkerBtn:hover {
+              box-shadow: 0px 5px 5px rgba(0, 0, 0, 0.1), 0px -2px 2px rgba(255, 255, 255, 0.25) inset, 0 2px 2px rgba(255, 255, 255, 0.4) inset;
+              color: #b1f6ff;
+              background: linear-gradient(#1fe0f9, #0e90a2);
+        }
+        #deleteMarkerBtn:active {
+                margin-top: 2px;
+                margin-bottom: -2px;
+                box-shadow: 0px 2px 2px rgba(63, 63, 63, 0.1), 0px -2px 2px rgba(255, 255, 255, 0.25) inset, 0 2px 2px rgba(255, 255, 255, 0.4) inset;
+                background: #0e90a2;
+                background: linear-gradient(#78efff, #4e9099);
+        }
+
+    </style>
+</head> 
+<body> 
+    <h1>Deine Kunden auf der Karte</h1>  
+    <div class="search-container">
+        <input type="text" id="plz" placeholder="Bitte Postleitzahl eingeben">
+        <img src="lupe.svg" alt="Lupe" style="position: absolute; left: 10px; top: 9px; width: 15px; height: 15px;">
+        <button id="deleteMarkerBtn" style="margin-left: 10px;">Fähnchen löschen</button>
+    </div> 
+    <div id="map"></div> 
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+       // let passwortd = "";
+        // Passwortabfrage
+      //  let passwort = prompt("Bitte Passwort eingeben:");
+        //if (passwort !== passwortd) {
+          //  document.body.innerHTML = "<h1>Zugriff verweigert</h1>";
+            //throw new Error("Falsches Passwort");
+       // }
+
+        // Karte initialisieren
+        let map = L.map('map').setView([51.1657, 10.4515], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Gespeicherte Marker laden
+        let markers = JSON.parse(localStorage.getItem('markers')) || [];
+        let markerObjects = [];
+        markers.forEach((markerData, index) => {
+            let marker = L.marker([markerData.lat, markerData.lon]).addTo(map);
+            markerObjects.push({ id: index, marker: marker, plz: markerData.plz });
+            marker.on('click', () => selectMarker(index));
+        });
+
+        let selectedMarkerId = null;
+
+        // Eventlistener für das Eingabefeld
+        document.getElementById('plz').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                addMarker();
+            }
+        });
+
+        // Eventlistener für den Löschen-Button
+        document.getElementById('deleteMarkerBtn').addEventListener('click', function () {
+            clearSelectedMarker();
+        });
+
+        // Funktion zum Marker hinzufügen
+        function addMarker() {
+            let plz = document.getElementById('plz').value;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${plz}&country=Germany`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        let lat = parseFloat(data[0].lat);
+                        let lon = parseFloat(data[0].lon);
+
+                        let samePlzCount = markers.filter(m => m.plz === plz).length;
+                        let offset = samePlzCount * 0.005;
+                        let newLat = lat + offset;
+                        let newLon = lon + offset;
+
+                        let marker = L.marker([newLat, newLon]).addTo(map);
+                        let newId = markerObjects.length;
+                        markerObjects.push({ id: newId, marker: marker, plz: plz });
+                        marker.on('click', () => selectMarker(newId));
+
+                        markers.push({ lat: newLat, lon: newLon, plz: plz });
+                        localStorage.setItem('markers', JSON.stringify(markers));
+                        document.getElementById('plz').value = '';
+                    } else {
+                        alert("Postleitzahl nicht gefunden!");
+                    }
+                })
+                .catch(error => {
+                    console.error("Fehler:", error);
+                    alert("Some functions of the website are only available when you are online. Please double check your internet connection.");
+                });
+        }
+
+        // Marker auswählen
+        function selectMarker(id) {
+            selectedMarkerId = id;
+            markerObjects[id].marker.openPopup();
+        }
+
+        // Marker löschen
+    function clearSelectedMarker() {
+    if (selectedMarkerId !== null) {
+        map.removeLayer(markerObjects[selectedMarkerId].marker);
+        markers.splice(selectedMarkerId, 1);
+        markerObjects.splice(selectedMarkerId, 1);
+        // IDs neu vergeben
+        markerObjects.forEach((obj, idx) => obj.id = idx);
+        localStorage.setItem('markers', JSON.stringify(markers));
+        selectedMarkerId = null;
+    } else {
+        alert("Please select a marker by clicking it before using this feature.");
+    }
+}
+    </script>
+</body>
+</html>
